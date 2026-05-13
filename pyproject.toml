@@ -75,6 +75,9 @@ dependencies = [
     "datus-scheduler-core>=0.1.1",
 ]
 
+[project.optional-dependencies]
+dm = ["dmPython>=1.1.5"]
+
 [project.urls]
 Homepage = "https://datus.ai/"
 Documentation = "https://docs.datus.ai"

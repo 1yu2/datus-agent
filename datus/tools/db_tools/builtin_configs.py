@@ -38,3 +38,21 @@ class DuckDBConfig(BaseModel):
     enable_external_access: bool = Field(default=True, description="Enable DuckDB external file access")
     memory_limit: Optional[str] = Field(default=None, description="DuckDB memory limit, e.g. '2GB'")
     iceberg: Optional[Dict[str, Any]] = Field(default=None, description="DuckDB Iceberg REST catalog configuration")
+
+
+class DMConfig(BaseModel):
+    """DM (Dameng) database configuration — server connection parameters."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    host: str = Field(..., description="DM server host")
+    port: int = Field(default=5236, description="DM server port")
+    username: str = Field(..., description="DM login username")
+    password: str = Field(..., description="DM login password")
+    database: Optional[str] = Field(default=None, description="Optional database/instance name")
+    schema_name: Optional[str] = Field(
+        default=None,
+        alias="schema",
+        description="Default schema (DM upper-cases unquoted identifiers)",
+    )
+    autocommit: bool = Field(default=True, description="Whether to autocommit DML")

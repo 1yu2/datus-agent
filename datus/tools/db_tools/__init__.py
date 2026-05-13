@@ -10,6 +10,7 @@ __all__ = [
     "BaseSqlConnector",
     "SQLiteConnector",
     "DuckdbConnector",
+    "DMConnector",
     "connector_registry",
     "ConnectorRegistry",
     "AdapterMetadata",
@@ -17,7 +18,7 @@ __all__ = [
 
 
 def _register_builtin_connectors():
-    """Register built-in connectors (SQLite and DuckDB only)"""
+    """Register built-in connectors (SQLite, DuckDB, DM)"""
     # SQLite (0 dependencies, no schema support)
     try:
         from .builtin_configs import SQLiteConfig
@@ -49,6 +50,22 @@ def _register_builtin_connectors():
         if "DuckdbConnector" not in __all__:
             __all__.append("DuckdbConnector")
         globals()["DuckdbConnector"] = DuckdbConnector
+    except ImportError:
+        pass
+
+    # DM (Dameng) — schema support, dmPython driver loaded lazily at connect()
+    try:
+        from .builtin_configs import DMConfig
+        from .dm_connector import DMConnector
+
+        connector_registry.register(
+            "dm",
+            DMConnector,
+            config_class=DMConfig,
+            display_name="DM (Dameng)",
+            capabilities={"schema"},
+        )
+        globals()["DMConnector"] = DMConnector
     except ImportError:
         pass
 

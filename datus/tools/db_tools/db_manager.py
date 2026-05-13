@@ -9,7 +9,7 @@ from datus_db_core import BaseSqlConnector, ConnectionConfig, DatusDbException, 
 from sqlalchemy.engine.url import URL, make_url
 
 from datus.configuration.agent_config import DbConfig
-from datus.tools.db_tools.config import DuckDBConfig, SQLiteConfig
+from datus.tools.db_tools.config import DMConfig, DuckDBConfig, SQLiteConfig
 from datus.utils.constants import DBType
 from datus.utils.exceptions import DatusException, ErrorCode
 from datus.utils.loggings import get_logger
@@ -326,6 +326,31 @@ class DBManager:
                 enable_external_access=_bool_extra(extra.get("enable_external_access"), True),
                 memory_limit=extra.get("memory_limit"),
                 iceberg=extra.get("iceberg"),
+            )
+
+        elif db_type == DBType.DM:
+            extra = db_config.extra or {}
+            host = _clean_str(db_config.host)
+            port = _port_or_none(db_config.port) or 5236
+            if not host:
+                raise DatusException(
+                    code=ErrorCode.COMMON_CONFIG_ERROR,
+                    message="DM datasource requires 'host'",
+                )
+            if not _clean_str(db_config.username):
+                raise DatusException(
+                    code=ErrorCode.COMMON_CONFIG_ERROR,
+                    message="DM datasource requires 'username'",
+                )
+            return DMConfig(
+                host=host,
+                port=port,
+                username=_clean_str(db_config.username),
+                password=_clean_str(db_config.password),
+                database=_clean_str(db_config.database) or None,
+                default_schema=_clean_str(db_config.schema) or None,
+                autocommit=_bool_extra(extra.get("autocommit"), True),
+                timeout_seconds=timeout_seconds,
             )
 
         else:

@@ -180,6 +180,19 @@ agent:
         username: ${STARROCKS_USER}
         password: ${STARROCKS_PASSWORD}
         database: ${STARROCKS_DATABASE}
+      # DM (Dameng) — requires `pip install datus-agent[dm]` to pull in dmPython.
+      # DM is Oracle-like: identifiers are upper-cased unless quoted; the agent
+      # quotes them via "schema"."table" so user-supplied casing is preserved.
+      my_dm:
+        type: dm
+        host: ${DM_HOST}
+        port: 5236
+        username: ${DM_USER}
+        password: ${DM_PASSWORD}
+        database: DAMENG           # DM instance name (optional, used as logical id)
+        schema: SYSDBA             # default schema; queried owner for ALL_TABLES
+        extra:
+          autocommit: true
     # Default selection across BI / Scheduler / Semantic follows one rule:
     # explicit call-site arg → ``./.datus/config.yml`` project pin → YAML
     # ``default: true`` flag → single-entry shortcut → raise on ambiguity.
