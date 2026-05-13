@@ -233,9 +233,11 @@ agent:
     # 3. if you pay more attention to retrieval quality, you can choose 1024-dimension model according to language (English/Chinese): BAAI/bge-large-en-v1.5 or BAAI/bge-large-zh-v1.5 (~1.2G)
     # Of course, you can also choose your own model according to your business.
     # If you don't configure the following models, all-MiniLM-L6-v2 will be selected by default.
-    # Cloud model suggestions: Now we just support openai.
+    # Cloud model suggestions: openai, or any OpenAI-compatible endpoint (e.g. a self-hosted bge-m3 via xinference / vllm / infinity).
+    # For bge-m3, set registry_name: bge-m3, model_name: bge-m3, dim_size: 1024, and point target_model at a model entry whose base_url is your bge-m3 server.
+    # Note: when switching `database` to a 1024-dim model, align the other stores (document/metric/semantic_model/reference_sql/ext_knowledge) to the same dim_size to avoid mixed-dim collections.
     database:
-      registry_name: openai # default is sentence-transformers
+      registry_name: openai # default is sentence-transformers; also accepts: openai, bge-m3, sentence-transformers, fastembed
       model_name: text-embedding-v3-small
       dim_size: 1024
       batch_size: 10 # Aliyun only supports no more than 10

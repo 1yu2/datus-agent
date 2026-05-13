@@ -4,6 +4,8 @@
 
 """Tests for datus/storage/embedding_models.py — EmbeddingModel and get_embedding_model."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from datus.storage.embedding_models import DEFAULT_MODEL_CONFIG, EMBEDDING_MODELS, EmbeddingModel, get_embedding_model
@@ -285,3 +287,61 @@ class TestTryInitModelSilent:
         model = EmbeddingModel(model_name="test", dim_size=384)
         model.is_model_failed = True
         assert model.try_init_model_silent() is False
+
+
+# ---------------------------------------------------------------------------
+# init_model BGE_M3 branch
+# ---------------------------------------------------------------------------
+
+
+class TestInitModelBgeM3:
+    """Tests for the BGE_M3 branch of EmbeddingModel.init_model."""
+
+    @pytest.mark.ci
+    def test_bge_m3_uses_openai_compatible_endpoint(self):
+        """BGE_M3 should construct OpenAIEmbeddings with the provided base_url/api_key."""
+        openai_config = MagicMock()
+        openai_config.api_key = "sk-test"
+        openai_config.base_url = "http://bge:8080/v1"
+
+        model = EmbeddingModel(
+            model_name="bge-m3",
+            dim_size=1024,
+            registry_name=EmbeddingProvider.BGE_M3,
+            openai_config=openai_config,
+        )
+
+        with patch("datus.storage.embedding_openai.OpenAIEmbeddings.create") as mock_create:
+            instance = MagicMock()
+            instance.generate_embeddings.return_value = [[0.0] * 1024]
+            mock_create.return_value = instance
+
+            model.init_model()
+
+            mock_create.assert_called_once_with(
+                name="bge-m3",
+                dim=1024,
+                api_key="sk-test",
+                base_url="http://bge:8080/v1",
+            )
+            assert model._model is instance
+
+    @pytest.mark.ci
+    def test_bge_m3_defaults_when_unset(self):
+        """When model_name/dim_size are unset, BGE_M3 falls back to 'bge-m3' and 1024."""
+        model = EmbeddingModel(
+            model_name=None,
+            dim_size=None,
+            registry_name=EmbeddingProvider.BGE_M3,
+        )
+
+        with patch("datus.storage.embedding_openai.OpenAIEmbeddings.create") as mock_create:
+            instance = MagicMock()
+            instance.generate_embeddings.return_value = [[0.0] * 1024]
+            mock_create.return_value = instance
+
+            model.init_model()
+
+            kwargs = mock_create.call_args.kwargs
+            assert kwargs["name"] == "bge-m3"
+            assert kwargs["dim"] == 1024

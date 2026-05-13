@@ -41,6 +41,7 @@ class EmbeddingProvider(str, Enum):
     SENTENCE_TRANSFORMERS = "sentence-transformers"
     FASTEMBED = "fastembed"
     HUGGINGFACE = "huggingface"
+    BGE_M3 = "bge-m3"
 
 
 # System sub-agents that are built-in and not user-configurable

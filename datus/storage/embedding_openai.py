@@ -68,6 +68,7 @@ class OpenAIEmbeddings(BaseModel, EmbeddingFunction):
             "text-embedding-ada-002",
             "text-embedding-3-large",
             "text-embedding-3-small",
+            "bge-m3",
         ]
 
     @cached_property
@@ -78,6 +79,8 @@ class OpenAIEmbeddings(BaseModel, EmbeddingFunction):
             return self.dim or 3072
         elif self.name == "text-embedding-3-small":
             return self.dim or 1536
+        elif "bge-m3" in self.name:
+            return self.dim or 1024
         else:
             raise DatusException(
                 ErrorCode.COMMON_UNSUPPORTED,
@@ -98,7 +101,7 @@ class OpenAIEmbeddings(BaseModel, EmbeddingFunction):
                 "input": valid_texts,
                 "model": self.name,
             }
-            if self.name != "text-embedding-ada-002" and self.dim is not None:
+            if self.name != "text-embedding-ada-002" and "bge-m3" not in self.name and self.dim is not None:
                 kwargs["dimensions"] = self.dim
 
             logger.debug(f"Calling OpenAI API: model={self.name}, text_count={len(valid_texts)}")

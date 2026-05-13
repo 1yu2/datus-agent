@@ -4,6 +4,9 @@
 
 """Unit tests for datus.storage.embedding_openai (pure logic only, no API calls)."""
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import pytest
 
 from datus.storage.embedding_openai import OpenAIEmbeddings
@@ -118,6 +121,24 @@ class TestNdims:
         with pytest.raises(DatusException, match="Unknown embedding model name"):
             emb.ndims()
 
+    @pytest.mark.ci
+    def test_bge_m3_default_dims(self):
+        """bge-m3 should default to 1024 dimensions."""
+        emb = OpenAIEmbeddings(name="bge-m3")
+        assert emb.ndims() == 1024
+
+    @pytest.mark.ci
+    def test_bge_m3_custom_dims(self):
+        """bge-m3 should respect a custom dim override."""
+        emb = OpenAIEmbeddings(name="bge-m3", dim=768)
+        assert emb.ndims() == 768
+
+    @pytest.mark.ci
+    def test_bge_m3_suffix_match(self):
+        """Any model name containing 'bge-m3' should be treated as bge-m3."""
+        emb = OpenAIEmbeddings(name="my-bge-m3-finetune")
+        assert emb.ndims() == 1024
+
 
 # ---------------------------------------------------------------------------
 # model_names()
@@ -129,12 +150,13 @@ class TestModelNames:
 
     @pytest.mark.ci
     def test_model_names_returns_expected_list(self):
-        """model_names() should return the three known model names."""
+        """model_names() should return the known OpenAI-compatible model names."""
         names = OpenAIEmbeddings.model_names()
         assert names == [
             "text-embedding-ada-002",
             "text-embedding-3-large",
             "text-embedding-3-small",
+            "bge-m3",
         ]
 
 
@@ -173,3 +195,57 @@ class TestSetattr:
         emb = OpenAIEmbeddings()
         emb.organization = "org-new"
         assert emb.organization == "org-new"
+
+
+# ---------------------------------------------------------------------------
+# generate_embeddings kwargs gating (per-model behaviour)
+# ---------------------------------------------------------------------------
+
+
+def _stub_client_returning(values):
+    client = MagicMock()
+    data = [SimpleNamespace(embedding=v) for v in values]
+    client.embeddings.create.return_value = SimpleNamespace(data=data)
+    return client
+
+
+class TestGenerateEmbeddingsKwargs:
+    """Tests for which kwargs get forwarded to the OpenAI client per model."""
+
+    @pytest.mark.ci
+    def test_bge_m3_omits_dimensions_kwarg(self):
+        """bge-m3 must NOT send 'dimensions' (some bge servers reject it)."""
+        emb = OpenAIEmbeddings(name="bge-m3", dim=1024)
+        client = _stub_client_returning([[0.0] * 1024])
+        emb.__dict__["_openai_client"] = client
+
+        emb.generate_embeddings(["hello"])
+
+        kwargs = client.embeddings.create.call_args.kwargs
+        assert "dimensions" not in kwargs
+        assert kwargs["model"] == "bge-m3"
+        assert kwargs["input"] == ["hello"]
+
+    @pytest.mark.ci
+    def test_text_embedding_3_small_includes_dimensions(self):
+        """text-embedding-3-small with explicit dim should forward 'dimensions'."""
+        emb = OpenAIEmbeddings(name="text-embedding-3-small", dim=512)
+        client = _stub_client_returning([[0.0] * 512])
+        emb.__dict__["_openai_client"] = client
+
+        emb.generate_embeddings(["hello"])
+
+        kwargs = client.embeddings.create.call_args.kwargs
+        assert kwargs.get("dimensions") == 512
+
+    @pytest.mark.ci
+    def test_ada_002_omits_dimensions(self):
+        """ada-002 must NOT receive 'dimensions' (fixed 1536)."""
+        emb = OpenAIEmbeddings(name="text-embedding-ada-002", dim=256)
+        client = _stub_client_returning([[0.0] * 1536])
+        emb.__dict__["_openai_client"] = client
+
+        emb.generate_embeddings(["hello"])
+
+        kwargs = client.embeddings.create.call_args.kwargs
+        assert "dimensions" not in kwargs

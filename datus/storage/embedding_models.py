@@ -215,6 +215,24 @@ class EmbeddingModel:
             # check if the model is initialized
             self._model.generate_embeddings(["foo"])
             logger.debug(f"Model {self.registry_name}/{self.model_name} initialized successfully")
+
+        elif self.registry_name == EmbeddingProvider.BGE_M3:
+            logger.debug(f"Initializing model {self.registry_name}/{self.model_name}")
+            from datus.storage.embedding_openai import OpenAIEmbeddings
+
+            name = self.model_name or "bge-m3"
+            dim = self._dim_size or 1024
+            if self.openai_config:
+                self._model = OpenAIEmbeddings.create(
+                    name=name,
+                    dim=dim,
+                    api_key=self.openai_config.api_key,
+                    base_url=self.openai_config.base_url,
+                )
+            else:
+                self._model = OpenAIEmbeddings.create(name=name, dim=dim)
+            self._model.generate_embeddings(["foo"])
+            logger.debug(f"Model {self.registry_name}/{self.model_name} initialized successfully")
         else:
             raise DatusException(
                 ErrorCode.MODEL_EMBEDDING_ERROR,
